@@ -28,6 +28,9 @@ function compare_with_ground_truth(x, fs, results, frame_indices, method_name, g
     gt = gt(1:L);
     estimated = estimated(1:L);
     
+    % Remove DC from GT for fair comparison with AC-coupled estimate
+    gt = gt - mean(gt);
+
     % 4. TIME ALIGNMENT (Crucial step)
     % Find best lag
     max_lag = round(0.02 * fs); % Allow +/- 20ms shift
@@ -51,8 +54,19 @@ function compare_with_ground_truth(x, fs, results, frame_indices, method_name, g
     end
     
     % 6. Normalize
-    gt_norm = gt / (max(abs(gt)) + eps);
-    estimated_norm = estimated / (max(abs(estimated)) + eps);
+    % Robust Normalization: Ignore first and last 5% for amplitude calculation to avoid edge transients
+    trim_percent = 0.05;
+    trim_s = max(1, round(L * trim_percent));
+    trim_e = min(L, round(L * (1 - trim_percent)));
+    valid_range = trim_s:trim_e;
+    
+    if isempty(valid_range), valid_range = 1:L; end
+    
+    gt_amp = max(abs(gt(valid_range))) + eps;
+    est_amp = max(abs(estimated(valid_range))) + eps;
+    
+    gt_norm = gt / gt_amp;
+    estimated_norm = estimated / est_amp;
     
     % 7. Metrics
     correlation = corr(gt_norm, estimated_norm);
