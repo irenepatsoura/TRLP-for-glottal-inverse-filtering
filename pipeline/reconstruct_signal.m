@@ -73,12 +73,9 @@ function signal_out = reconstruct_signal(results, frame_indices, total_length, f
     signal_out = signal_out ./ window_sum;
 
     % Optional low-pass to smooth high-frequency artifacts
-    if do_lowpass
-        if nargin < 5 || isempty(fs)
-            error('fs must be provided when do_lowpass = true.');
-        end
-        fc = 1200;  % Hz
-        [b, a] = butter(4, fc / (fs / 2), 'low');
+    if nargin >= 5 && ~isempty(fs)
+        fc = 1500; % 1.5 kHz
+        [b, a] = butter(2, fc / (fs / 2), 'low');
         signal_out = filtfilt(b, a, signal_out);
     end
 end

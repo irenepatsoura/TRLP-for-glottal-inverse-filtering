@@ -3,6 +3,14 @@
 if size(x, 2) > 1
     x = mean(x, 2);
 end
+x = x(:);  % Ensure column vector
+
+% --- Fix Polarity ---
+% Glottal pulses have positive skewness. If negative, flip the signal.
+if skewness(x) < 0
+    x = -x;
+    fprintf('Signal polarity inverted based on skewness check.\n');
+end
 
 fc_hp = 50;  % Hz
 [b_hp, a_hp] = butter(2, fc_hp/(fs/2), 'high');
@@ -10,7 +18,7 @@ x = filtfilt(b_hp, a_hp, x);
 
 % 2. Frame-by-frame analysis parameters
 analysis_mode = 'fixed';  % 'fixed' or 'adaptive'
-frame_length_ms = 30;     % Frame length in ms (for fixed mode)
+frame_length_ms = 50;     % Frame length in ms (for fixed mode)
 frame_shift_ms = 10;      % Frame shift in ms (50% overlap is common)
 frame_shift = round(frame_shift_ms * fs / 1000);
 
@@ -79,5 +87,5 @@ fprintf('Done processing!\n');
 visualize_frame_results(x, fs, results, frame_indices, analysis_mode);
 
 % 8. Compare with ground truth
-gt_file = 'data/Glottal_signals_db/aa-pout-105Hz-8kHz.wav';  % Adjust path
+gt_file = 'data/Glottal_signals_db/aa-ug-105Hz-8kHz.wav';  % Adjust path
 compare_with_ground_truth(x, fs, results, frame_indices, 'QCP', gt_file);

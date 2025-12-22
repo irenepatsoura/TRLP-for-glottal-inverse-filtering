@@ -1,98 +1,83 @@
 function compare_with_ground_truth(x, fs, results, frame_indices, method_name, gt_filepath)
-    % Simplified comparison: ground truth vs estimated (one above the other + zoom + PSD)
+    % 1. Load Ground Truth
+    [gt, fs_gt] = audioread(gt_filepath);
+    if size(gt, 2) > 1, gt = mean(gt, 2); end
+    gt = gt(:);
+    if fs_gt ~= fs, gt = resample(gt, fs, fs_gt); end
     
-    % Determine field name
+    % 2. Reconstruct Estimated Signal
     if strcmp(method_name, 'QCP')
         field_name = 'sg';
     elseif strcmp(method_name, 'IAIF')
         field_name = 'g';
     else
-        error('Unknown method. Use QCP or IAIF');
+        error('Unknown method');
     end
     
-    % Load ground truth
-    fprintf('Loading ground truth from: %s\n', gt_filepath);
-    [gt, fs_gt] = audioread(gt_filepath);
-    if size(gt, 2) > 1, gt = mean(gt, 2); end
-    gt = gt(:);
-    
-    if fs_gt ~= fs
-        fprintf('Resampling ground truth from %d Hz to %d Hz\n', fs_gt, fs);
-        gt = resample(gt, fs, fs_gt);
-    end
-    
-    % Reconstruct estimated
-    fprintf('Reconstructing estimated glottal flow...\n');
     estimated = reconstruct_signal(results, frame_indices, length(x), field_name, fs);
-    estimated = detrend(estimated, 'linear');
     
-    % Align
-    min_length = min(length(gt), length(estimated));
-    gt = gt(1:min_length);
-    estimated = estimated(1:min_length);
+    % Post-process Estimated: Detrend and mild Low-pass
+    estimated = detrend(estimated, 'linear'); % Remove DC drift
+    [b,a] = butter(2, 2000/(fs/2), 'low');    % Clean up high freq noise for comparison
+    estimated = filtfilt(b,a, estimated);
+
+    % 3. Align Lengths
+    L = min(length(gt), length(estimated));
+    gt = gt(1:L);
+    estimated = estimated(1:L);
     
-    % Normalize
-    gt_norm = gt / max(abs(gt));
-    estimated_norm = estimated / max(abs(estimated));
+    % 4. TIME ALIGNMENT (Crucial step)
+    % Find best lag
+    max_lag = round(0.02 * fs); % Allow +/- 20ms shift
+    [r, lags] = xcorr(gt, estimated, max_lag);
+    [~, I] = max(abs(r));
+    lag_diff = lags(I);
     
-    % Metrics
+    % Shift estimated signal
+    if lag_diff > 0
+        estimated = [zeros(lag_diff, 1); estimated(1:end-lag_diff)];
+    elseif lag_diff < 0
+        estimated = [estimated(-lag_diff+1:end); zeros(-lag_diff, 1)];
+    end
+    
+    % 5. Check Inversion
+    % If correlation is negative, flip the signal
+    tmp_corr = corr(gt, estimated);
+    if tmp_corr < 0
+        estimated = -estimated;
+        fprintf('Auto-flipping inverted signal for %s.\n', method_name);
+    end
+    
+    % 6. Normalize
+    gt_norm = gt / (max(abs(gt)) + eps);
+    estimated_norm = estimated / (max(abs(estimated)) + eps);
+    
+    % 7. Metrics
     correlation = corr(gt_norm, estimated_norm);
     rmse = sqrt(mean((gt_norm - estimated_norm).^2));
     
-    fprintf('\n=== Comparison Metrics (%s) ===\n', method_name);
+    fprintf('\n=== %s Metrics (Aligned) ===\n', method_name);
     fprintf('Correlation: %.4f\n', correlation);
     fprintf('RMSE:       %.4f\n', rmse);
-    fprintf('================================\n\n');
     
-    % === SIMPLIFIED PLOTS ===
+    % === PLOTTING ===
     figure('Position', [100, 100, 1400, 600]);
-    set(gcf, 'Color', 'w');
+    t = (0:L-1)/fs;
     
-    t = (0:min_length-1) / fs;
+    subplot(3, 1, 1);
+    plot(t, gt_norm, 'b'); hold on;
+    plot(t, estimated_norm, 'r--');
+    title([method_name ' Aligned Comparison']); legend('GT', 'Est'); grid on;
     
-    % 1) Ground truth (top)
-    subplot(3, 2, [1, 2]);
-    plot(t, gt_norm, 'b', 'LineWidth', 0.8);
-    ylabel('Amplitude');
-    title('Ground Truth Glottal Flow');
-    grid on; xlim([0 t(end)]);
+    subplot(3, 1, 2);
+    % Zoom in middle
+    mid = round(L/2); 
+    idx = mid:min(mid+400, L);
+    plot(t(idx), gt_norm(idx), 'b', 'LineWidth', 1.5); hold on;
+    plot(t(idx), estimated_norm(idx), 'r--', 'LineWidth', 1.5);
+    title('Zoomed View'); grid on;
     
-    % 2) Estimated (below ground truth)
-    subplot(3, 2, [3, 4]);
-    plot(t, estimated_norm, 'r', 'LineWidth', 0.8);
-    xlabel('Time (s)'); ylabel('Amplitude');
-    title(sprintf('%s Estimated Glottal Flow (Corr: %.3f, RMSE: %.3f)', ...
-                  method_name, correlation, rmse));
-    grid on; xlim([0 t(end)]);
-    
-    % 3) Zoom: 3-4 periods around middle
-    subplot(3, 2, 5);
-    % Pick a window of ~40 ms in the middle
-    mid_t = t(end)/2;
-    zoom_start_t = mid_t - 0.02;  % 20 ms before middle
-    zoom_end_t   = mid_t + 0.02;  % 20 ms after
-    zoom_idx = find(t >= zoom_start_t & t <= zoom_end_t);
-    
-    plot(t(zoom_idx), gt_norm(zoom_idx), 'b', 'LineWidth', 1.5, ...
-         'DisplayName', 'Ground Truth');
-    hold on;
-    plot(t(zoom_idx), estimated_norm(zoom_idx), 'r--', 'LineWidth', 1.5, ...
-         'DisplayName', method_name);
-    xlabel('Time (s)'); ylabel('Amplitude');
-    title('Zoomed Comparison (3-4 periods)');
-    legend('Location', 'best'); grid on;
-    
-    % 4) Power Spectral Density
-    subplot(3, 2, 6);
-    nfft = 2048;
-    [Pgt, f]  = pwelch(gt_norm, hann(512), 256, nfft, fs);
-    [Pest, ~] = pwelch(estimated_norm, hann(512), 256, nfft, fs);
-    
-    plot(f, 10*log10(Pgt), 'b', 'LineWidth', 1.5, 'DisplayName', 'Ground Truth');
-    hold on;
-    plot(f, 10*log10(Pest), 'r', 'LineWidth', 1.5, 'DisplayName', method_name);
-    xlabel('Frequency (Hz)'); ylabel('Power/Frequency (dB/Hz)');
-    title('Power Spectral Density');
-    legend('Location', 'best'); grid on;
-    xlim([0, 2000]);
+    subplot(3,1,3);
+    pwelch(estimated_norm, [], [], [], fs);
+    title('PSD of Estimate');
 end

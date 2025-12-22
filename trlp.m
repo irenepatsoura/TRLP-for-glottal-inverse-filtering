@@ -4,6 +4,13 @@ if size(speech, 2) > 1
 end
 speech = speech(:);
 
+% --- Fix Polarity ---
+% Glottal pulses have positive skewness. If negative, flip the signal.
+if skewness(speech) < 0
+    speech = -speech;
+    fprintf('Signal polarity inverted based on skewness check.\n');
+end
+
 % Optional: same high-pass as in other experiments
 fc_hp = 50;                         % Hz
 [b_hp, a_hp] = butter(2, fc_hp/(fs/2), 'high');
@@ -12,8 +19,8 @@ speech = filtfilt(b_hp, a_hp, speech);
 % -------------------------------------------------------------------------
 % 2. Frame / LPC parameters
 % -------------------------------------------------------------------------
-frame_length = 0.3;    % seconds
-frame_shift  = 0.02;   % seconds
+frame_length = 0.05;    % seconds
+frame_shift  = 0.01;   % seconds
 p       = 20;          % LPC order
 lambda1 = 1.0;         % diag regularization
 lambda2 = 0.9;         % previous-coeff regularization
@@ -44,6 +51,8 @@ for k = 1:num_frames
     end
 
     frame = speech(start_idx:end_idx);
+    
+    frame_w = frame .* win;
 
     % --- Regularized autocorrelation LPC ---
     R = xcorr(frame, p, 'biased');
@@ -59,7 +68,7 @@ for k = 1:num_frames
     a_prev = a;
 
     % --- Inverse filtering: residual ---
-    residual = filter([0; -a], 1, frame);
+    residual = filter([1; -a], 1, frame);
 
     % --- Simple leaky integration of residual -> glottal-like g_frame ---
     g_frame = filter(1, [1 -rho], residual);
@@ -103,7 +112,7 @@ set(gcf, 'Color', 'w');
 % -------------------------------------------------------------------------
 % 6. Load ground-truth glottal flow (ug)
 % -------------------------------------------------------------------------
-gt_filepath = 'data/Glottal_signals_db/aa-pout-105Hz-8kHz.wav';
+gt_filepath = 'data/Glottal_signals_db/aa-ug-105Hz-8kHz.wav';
 fprintf('Loading ground truth from: %s\n', gt_filepath);
 [gt, fs_gt] = audioread(gt_filepath);
 if size(gt, 2) > 1
@@ -161,53 +170,53 @@ legend('Location', 'best');
 grid on;
 hold off;
 
-% 2) Zoom: beginning (0–50 ms)
-subplot(4, 2, 3);
-zoom_samples = round(0.05 * fs);  % first 50 ms
-zoom_idx = 1:min(zoom_samples, min_length);
-plot(t(zoom_idx), gt_norm(zoom_idx), 'b', 'LineWidth', 1.5);
-hold on;
-plot(t(zoom_idx), g_norm(zoom_idx), 'r--', 'LineWidth', 1.5);
-xlabel('Time (s)');
-ylabel('Amplitude');
-title('Zoom: Beginning (0–50 ms)');
-legend('Ground Truth', 'TRLP');
-grid on;
-
-% 3) Zoom: middle
-subplot(4, 2, 4);
-mid_start = round(min_length/2);
-zoom_idx = mid_start:min(mid_start + zoom_samples, min_length);
-plot(t(zoom_idx), gt_norm(zoom_idx), 'b', 'LineWidth', 1.5);
-hold on;
-plot(t(zoom_idx), g_norm(zoom_idx), 'r--', 'LineWidth', 1.5);
-xlabel('Time (s)');
-ylabel('Amplitude');
-title('Zoom: Middle');
-legend('Ground Truth', 'TRLP');
-grid on;
-
-% 4) Error signal
-subplot(4, 2, [5, 6]);
-error_signal = gt_norm - g_norm;
-plot(t, error_signal, 'k', 'LineWidth', 0.5);
-xlabel('Time (s)');
-ylabel('Error');
-title(sprintf('Estimation Error (RMSE: %.4f)', rmse));
-grid on;
-
-% 5) Scatter plot
-subplot(4, 2, 7);
-scatter(gt_norm, g_norm, 1, 'filled', 'MarkerFaceAlpha', 0.3);
-hold on;
-plot([-1, 1], [-1, 1], 'r--', 'LineWidth', 2);  % ideal line
-xlabel('Ground Truth');
-ylabel('TRLP Estimated');
-title(sprintf('Scatter Plot (Corr: %.4f)', correlation));
-axis equal;
-grid on;
-xlim([-1, 1]);
-ylim([-1, 1]);
+% % 2) Zoom: beginning (0–50 ms)
+% subplot(4, 2, 3);
+% zoom_samples = round(0.05 * fs);  % first 50 ms
+% zoom_idx = 1:min(zoom_samples, min_length);
+% plot(t(zoom_idx), gt_norm(zoom_idx), 'b', 'LineWidth', 1.5);
+% hold on;
+% plot(t(zoom_idx), g_norm(zoom_idx), 'r--', 'LineWidth', 1.5);
+% xlabel('Time (s)');
+% ylabel('Amplitude');
+% title('Zoom: Beginning (0–50 ms)');
+% legend('Ground Truth', 'TRLP');
+% grid on;
+ 
+% % 3) Zoom: middle
+% subplot(4, 2, 4);
+% mid_start = round(min_length/2);
+% zoom_idx = mid_start:min(mid_start + zoom_samples, min_length);
+% plot(t(zoom_idx), gt_norm(zoom_idx), 'b', 'LineWidth', 1.5);
+% hold on;
+% plot(t(zoom_idx), g_norm(zoom_idx), 'r--', 'LineWidth', 1.5);
+% xlabel('Time (s)');
+% ylabel('Amplitude');
+% title('Zoom: Middle');
+% legend('Ground Truth', 'TRLP');
+% grid on;
+% 
+% % 4) Error signal
+% subplot(4, 2, [5, 6]);
+% error_signal = gt_norm - g_norm;
+% plot(t, error_signal, 'k', 'LineWidth', 0.5);
+% xlabel('Time (s)');
+% ylabel('Error');
+% title(sprintf('Estimation Error (RMSE: %.4f)', rmse));
+% grid on;
+% 
+% % 5) Scatter plot
+% subplot(4, 2, 7);
+% scatter(gt_norm, g_norm, 1, 'filled', 'MarkerFaceAlpha', 0.3);
+% hold on;
+% plot([-1, 1], [-1, 1], 'r--', 'LineWidth', 2);  % ideal line
+% xlabel('Ground Truth');
+% ylabel('TRLP Estimated');
+% title(sprintf('Scatter Plot (Corr: %.4f)', correlation));
+% axis equal;
+% grid on;
+% xlim([-1, 1]);
+% ylim([-1, 1]);
 
 % 6) Frequency-domain comparison (PSD)
 subplot(4, 2, 8);
