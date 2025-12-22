@@ -10,6 +10,8 @@ function compare_with_ground_truth(x, fs, results, frame_indices, method_name, g
         field_name = 'sg';
     elseif strcmp(method_name, 'IAIF')
         field_name = 'g';
+    elseif strcmp(method_name, 'TRLP')
+        field_name = 'g';
     else
         error('Unknown method');
     end

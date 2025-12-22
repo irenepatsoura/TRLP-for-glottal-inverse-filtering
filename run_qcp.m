@@ -1,4 +1,5 @@
 % 1. Load or create a speech signal
+addpath("core","eval","framework","pipeline")
 [x, fs] = audioread('data/Glottal_signals_db/aa-pout-105Hz-8kHz.wav');
 if size(x, 2) > 1
     x = mean(x, 2);
@@ -30,6 +31,9 @@ else
     frame_length = round(frame_length_ms * fs / 1000);
     pitch_info = struct('f0', [], 'periods', []);
 end
+
+% 3b. Choose a global f0 for QCP
+global_f0 = 105;
 
 % 4. Create frames
 fprintf('Creating frames...\n');
