@@ -35,7 +35,7 @@ num_frames = length(frames);
 fprintf('Total frames: %d\n', num_frames);
 
 % 4. TRLP options
-p = 20;          % LPC order
+p =  fs/1000 + 2;
 rho = 0.99;      % Integrator leak factor
 a_prev = zeros(p, 1); % Initialize previous coefficients
 

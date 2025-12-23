@@ -53,7 +53,7 @@ function compare_with_ground_truth(x, fs, results, frame_indices, method_name, g
         fprintf('Auto-flipping inverted signal for %s.\n', method_name);
     end
     
-    % 6. Normalize
+    % 6. Normalize to [0, 1]
     % Robust Normalization: Ignore first and last 5% for amplitude calculation to avoid edge transients
     trim_percent = 0.05;
     trim_s = max(1, round(L * trim_percent));
@@ -62,11 +62,15 @@ function compare_with_ground_truth(x, fs, results, frame_indices, method_name, g
     
     if isempty(valid_range), valid_range = 1:L; end
     
-    gt_amp = max(abs(gt(valid_range))) + eps;
-    est_amp = max(abs(estimated(valid_range))) + eps;
+    % Normalize GT to [0, 1]
+    gt_min = min(gt(valid_range));
+    gt_max = max(gt(valid_range));
+    gt_norm = (gt - gt_min) / (gt_max - gt_min);
     
-    gt_norm = gt / gt_amp;
-    estimated_norm = estimated / est_amp;
+    % Normalize Estimated to [0, 1]
+    est_min = min(estimated(valid_range));
+    est_max = max(estimated(valid_range));
+    estimated_norm = (estimated - est_min) / (est_max - est_min);
     
     % 7. Metrics
     correlation = corr(gt_norm, estimated_norm);
@@ -82,7 +86,7 @@ function compare_with_ground_truth(x, fs, results, frame_indices, method_name, g
     
     subplot(3, 1, 1);
     plot(t, gt_norm, 'b'); hold on;
-    plot(t, estimated_norm, 'r--');
+    plot(t, estimated_norm, 'r-'); % Solid red line
     title([method_name ' Aligned Comparison']); legend('GT', 'Est'); grid on;
     
     subplot(3, 1, 2);
@@ -90,7 +94,7 @@ function compare_with_ground_truth(x, fs, results, frame_indices, method_name, g
     mid = round(L/2); 
     idx = mid:min(mid+400, L);
     plot(t(idx), gt_norm(idx), 'b', 'LineWidth', 1.5); hold on;
-    plot(t(idx), estimated_norm(idx), 'r--', 'LineWidth', 1.5);
+    plot(t(idx), estimated_norm(idx), 'r-', 'LineWidth', 1.5); % Solid red line
     title('Zoomed View'); grid on;
     
     subplot(3,1,3);

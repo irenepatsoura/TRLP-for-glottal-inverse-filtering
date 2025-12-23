@@ -54,7 +54,7 @@ fprintf('Total frames: %d\n', num_frames);
 
 % 5. IAIF options
 options = struct();
-options.p = 20;     % Vocal tract order
+options.p =  fs/1000 + 2;     % Vocal tract order
 options.g = 4;      % Glottal source order
 
 %%% NEW: pass f0 and causality explicitly, avoid per-frame find_f0 inside iaif
