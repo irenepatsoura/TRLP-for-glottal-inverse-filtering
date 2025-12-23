@@ -50,11 +50,12 @@ fprintf('Total frames: %d\n', num_frames);
 
 % 5. QCP options
 options = struct();
-options.dq = 0.7;
-options.pq = 0.1;
+options.dq = 0.4; % Reduced to ensure closed phase analysis
+options.pq = 0.05; % Start window shortly after GCI
 options.nramp = round(fs/8000*7);
-options.causality = 0;
+options.causality = 0; % 0=noncausal integration (backward), 1=causal
 options.f0 = global_f0;
+options.remove_real_poles = 1; % Force removal of spectral tilt (source) from VT model
 
 % 6. Process each frame
 fprintf('Processing frames...\n');

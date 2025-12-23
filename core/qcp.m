@@ -118,12 +118,23 @@ if remove_real_poles
   [dummy,Hvt] = zp2tf(z,p_,k);
 end
 
+% Inverse filtering should always be causal to cancel the causal vocal tract
+% We filter the original signal 'x' (not pre-emphasized 's2') to get the glottal flow derivative.
+dg_temp = filter(Hvt,1,x);
+
+% Adjust sign for integration
 if strcmp(causality, 'causal')
-    dg_temp = filter(Hvt,1,s2);
+    % Forward integration requires input U' to yield U
+    % dg_temp is prediction error (~ -U' if s2 is -S')
+    % So we negate it to get U'
+    dg_temp = -dg_temp;
 else
-    dg_temp = -flip(filter(Hvt,1,flip(s2)));
+    % Backward integration requires input -U' to yield U
+    % dg_temp is ~ -U'
+    % So we keep it as is
+    dg_temp = dg_temp;
 end
-dg_temp = -dg_temp;
+
 dg = valid(signal(dg_temp, s.fs));
 sg=integrate(dg,rho,f0,causality);
 Hg = lpc_signal(win(sg,winfunc),g);
@@ -149,7 +160,7 @@ function y=integrate(x,rho,f0,causality)
         % One?sided leaky integrator
         y_data = filter(1, [1 -rho], x_data);
     else
-        % Symmetric (non?causal) integrator – NO extra sign flip
+        % Symmetric (non?causal) integrator ï¿½ NO extra sign flip
         y_data = flip(filter(1, [1 -rho], flip(x_data)));
     end
 

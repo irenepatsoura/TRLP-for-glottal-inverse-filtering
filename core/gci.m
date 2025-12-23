@@ -14,6 +14,9 @@ else
     x_obj = signal(x, fs);  % Create signal object for lpc
 end
 
+% Ensure x_data is a row vector for concatenation
+x_data = x_data(:)';
+
 disp(['meanf0: ', num2str(meanf0)]);
 disp(['fs: ', num2str(fs)]);
 disp(['1/meanf0: ', num2str(1/meanf0)]);
