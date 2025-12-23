@@ -16,7 +16,7 @@ if skewness(x) < 0
 end
 
 %%% NEW: High-pass filtering (IAIF block 1 must be done in advance)
-fc_hp = 50;                          % e.g. 40–70 Hz
+fc_hp = 50;                          % e.g. 40ï¿½70 Hz
 [b_hp, a_hp] = butter(2, fc_hp/(fs/2), 'high');
 x = filtfilt(b_hp, a_hp, x);
 %%% END NEW
@@ -59,7 +59,8 @@ options.g = 4;      % Glottal source order
 
 %%% NEW: pass f0 and causality explicitly, avoid per-frame find_f0 inside iaif
 options.f0 = global_f0;  % used unless overwritten per frame (adaptive mode)
-options.causality = 0;   % 0 -> 'noncausal', 1 -> 'causal' (see iaif.m)
+options.causality = 0;   % 0 -> 'noncausal' integration (backward), 1 -> 'causal'
+options.remove_real_poles = 1; % Force removal of spectral tilt from VT model
 % options.rho = 0.99;    % (optional) integrator leak, default is 0.99
 % options.winfunc = @hamming;  % already default in iaif.m
 %%% END NEW
@@ -107,9 +108,6 @@ for i = 1:num_frames
 end
 
 fprintf('Done processing!\n');
-
-% 7. Visualize results
-visualize_iaif_results(x, fs, results, frame_indices, analysis_mode);
 
 % 8. Compare with ground truth
 % NOTE: For a real comparison with glottal flow, this path should usually

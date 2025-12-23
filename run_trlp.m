@@ -53,7 +53,8 @@ for i = 1:num_frames
     % Apply TRLP to frame
     try
         % Calculate LPC coefficients
-        a = mytrlp(frame_data, p, a_prev);
+        % Use a small lambda_factor (e.g., 0.1 to 1.0)
+        a = mytrlp(frame_data, p, a_prev, 0.5);
         
         % Update previous coefficients for next frame
         a_prev = a;

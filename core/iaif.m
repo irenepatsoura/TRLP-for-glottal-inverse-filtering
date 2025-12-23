@@ -173,11 +173,8 @@ sw = win(s,winfunc);
 [Hg1, e_1]=ar(arfunc_g,sw,1,aropt_g);
 
 % inverse filter (block 3)
-if strcmp(causality, 'causal')
-    sg1_temp = filter(Hg1,1,s.s);
-else
-    sg1_temp = -flip(filter(Hg1,1,flip(s.s)));
-end
+% Always use causal inverse filtering for physical modeling
+sg1_temp = filter(Hg1,1,s.s);
 sg1 = valid(signal(sg1_temp, s.fs));
 sg1w=win(sg1,winfunc);
 
@@ -191,11 +188,8 @@ sg1w=win(sg1,winfunc);
 
 
 % inverse filter (block 5)
-if strcmp(causality, 'causal')
-    g1_temp = filter(Hvt1,1,s.s);
-else
-    g1_temp = -flip(filter(Hvt1,1,flip(s.s)));
-end
+% Always use causal inverse filtering
+g1_temp = filter(Hvt1,1,s.s);
 g1 = valid(signal(g1_temp, s.fs));
 
 % cancel the lip-radiation effect by integrating svt1 (block 6)
@@ -207,11 +201,8 @@ u1w=win(u1,winfunc);
 [Hg2, e_dap] = ar(arfunc_g,u1w,g,aropt_g);
 
 % inverse filter s (block 8)
-if strcmp(causality, 'causal')
-    sg2_temp = filter(Hg2,1,s.s);
-else
-    sg2_temp = -flip(filter(Hg2,1,flip(s.s)));
-end
+% Always use causal inverse filtering
+sg2_temp = filter(Hg2,1,s.s);
 sg2 = valid(signal(sg2_temp, s.fs));
 
 % integrate (block 9)
@@ -235,11 +226,8 @@ if remove_real_poles
 end
 
 % inverse filter (block 11)
-if strcmp(causality, 'causal')
-    dg_temp = filter(Hvt2,1,s.s);
-else
-    dg_temp = -flip(filter(Hvt2,1,flip(s.s)));
-end
+% Always use causal inverse filtering
+dg_temp = filter(Hvt2,1,s.s);
 dg = valid(signal(dg_temp, s.fs));
 
 if diffout==1

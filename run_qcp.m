@@ -88,9 +88,6 @@ end
 
 fprintf('Done processing!\n');
 
-% 7. Visualize results
-visualize_frame_results(x, fs, results, frame_indices, analysis_mode);
-
 % 8. Compare with ground truth
 gt_file = 'data/Glottal_signals_db/aa-ug-105Hz-8kHz.wav';  % Adjust path
 compare_with_ground_truth(x, fs, results, frame_indices, 'QCP', gt_file);
