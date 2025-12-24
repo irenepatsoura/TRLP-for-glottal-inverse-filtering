@@ -8,15 +8,7 @@ function f0 = find_f0_yin(x)
 
 % $Id: find_f0_yin.m 84 2005-08-22 09:47:16Z mairas $
 
-disp(['Class of x: ', class(x)]);
-disp(['Has fs field? ', num2str(isfield(x, 'fs'))]);
-disp(['Has s field? ', num2str(isfield(x, 's'))]);
-if isfield(x, 'fs')
-    disp(['x.fs value: ', num2str(x.fs)]);
-end
-if isfield(x, 's')
-    disp(['length of x.s: ', num2str(length(x.s))]);
-end
+
 % range limits for f0
 
 f0_min = 60;
@@ -81,12 +73,6 @@ else
   min_val = dn(min_idx);
 end
 
-% Debug min_idx
-disp(['min_idx value: ', num2str(min_idx)]);
-disp(['min_idx size: ', num2str(size(min_idx))]);
-disp(['length(dn): ', num2str(length(dn))]);
-disp(['idx value: ', num2str(idx)]);
-disp(['val value: ', num2str(val)]);
 
 % Step 5: Parabolic interpolation
 if ~isempty(min_idx) && isscalar(min_idx) && min_idx > 1 && min_idx < length(dn)

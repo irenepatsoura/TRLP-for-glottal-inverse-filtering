@@ -44,8 +44,8 @@ for v_idx = 1:length(vowels)
         group_name = f0_groups{g_idx, 1};
         f0_list = f0_groups{g_idx, 2};
         
-        % Accumulators for this vowel-group combination
-        h1h2_acc = struct('GT', [], 'QCP', [], 'IAIF', [], 'TRLP', []);
+        % Accumulators for this vowel-group combination (Storing ERRORS: Est - GT)
+        h1h2_diff_acc = struct('QCP', [], 'IAIF', [], 'TRLP', []);
         
         for f0 = f0_list
             % Construct filename pattern
@@ -112,15 +112,14 @@ for v_idx = 1:length(vowels)
                 frm_gt = gt_frames{i};
                 
                 % --- GT H1-H2 ---
-                val = compute_h1h2(frm_gt, fs, f0);
-                h1h2_acc.GT = [h1h2_acc.GT; val];
+                val_gt = compute_h1h2(frm_gt, fs, f0);
                 
                 % --- QCP ---
                 try
                     frame_sig = signal(frm_speech, fs);
                     [sg, ~, ~, ~] = qcp(frame_sig, qcp_opts);
-                    val = compute_h1h2(sg.s, fs, f0);
-                    h1h2_acc.QCP = [h1h2_acc.QCP; val];
+                    val_est = compute_h1h2(sg.s, fs, f0);
+                    h1h2_diff_acc.QCP = [h1h2_diff_acc.QCP; val_est - val_gt];
                 catch
                 end
                 
@@ -128,8 +127,8 @@ for v_idx = 1:length(vowels)
                 try
                     [g_iaif, ~, ~, ~] = iaif(frm_speech, fs, iaif_opts);
                     if isa(g_iaif, 'signal'), g_iaif = g_iaif.s; end
-                    val = compute_h1h2(g_iaif, fs, f0);
-                    h1h2_acc.IAIF = [h1h2_acc.IAIF; val];
+                    val_est = compute_h1h2(g_iaif, fs, f0);
+                    h1h2_diff_acc.IAIF = [h1h2_diff_acc.IAIF; val_est - val_gt];
                 catch
                 end
                 
@@ -139,8 +138,8 @@ for v_idx = 1:length(vowels)
                     a_prev = a;
                     res = filter([1; -a], 1, frm_speech);
                     g_trlp = filter(1, [1 -trlp_rho], res);
-                    val = compute_h1h2(g_trlp, fs, f0);
-                    h1h2_acc.TRLP = [h1h2_acc.TRLP; val];
+                    val_est = compute_h1h2(g_trlp, fs, f0);
+                    h1h2_diff_acc.TRLP = [h1h2_diff_acc.TRLP; val_est - val_gt];
                 catch
                 end
             end
@@ -148,8 +147,9 @@ for v_idx = 1:length(vowels)
         
         % Calculate Mean/Std for this group
         row = {v_name, group_name};
-        for m = 1:length(methods)
-            vals = h1h2_acc.(methods{m});
+        methods_to_plot = {'QCP', 'IAIF', 'TRLP'};
+        for m = 1:length(methods_to_plot)
+            vals = h1h2_diff_acc.(methods_to_plot{m});
             if isempty(vals)
                 str = 'N/A';
             else
@@ -162,8 +162,55 @@ for v_idx = 1:length(vowels)
 end
 
 % Display Table
-fprintf('\n\n=== H1-H2 Metrics (Mean (Std) dB) ===\n');
-fprintf('%-10s %-10s %-15s %-15s %-15s %-15s\n', 'Vowel', 'Group', 'GT', 'QCP', 'IAIF', 'TRLP');
+fprintf('\n\n=== H1-H2 Error (Est - GT) [Mean (Std) dB] ===\n');
+fprintf('%-10s %-10s %-15s %-15s %-15s\n', 'Vowel', 'Group', 'QCP', 'IAIF', 'TRLP');
 for i = 1:size(results_table, 1)
-    fprintf('%-10s %-10s %-15s %-15s %-15s %-15s\n', results_table{i, :});
+    fprintf('%-10s %-10s %-15s %-15s %-15s\n', results_table{i, :});
 end
+
+% === PLOTTING ===
+% Prepare data for plotting
+categories = {};
+means = zeros(size(results_table, 1), 3);
+stds = zeros(size(results_table, 1), 3);
+
+for i = 1:size(results_table, 1)
+    categories{i} = [results_table{i, 1} ' ' results_table{i, 2}];
+    for m = 1:3
+        % Parse "Mean (Std)" string
+        str = results_table{i, m+2};
+        if strcmp(str, 'N/A')
+            means(i, m) = NaN;
+            stds(i, m) = 0;
+        else
+            parts = sscanf(str, '%f (%f)');
+            means(i, m) = parts(1);
+            stds(i, m) = parts(2);
+        end
+    end
+end
+
+figure('Position', [100, 100, 1200, 600]);
+b = bar(means);
+hold on;
+
+% Calculate centers of bars for error bars
+[ngroups, nbars] = size(means);
+x = nan(nbars, ngroups);
+for i = 1:nbars
+    if isprop(b(i), 'XEndPoints')
+        x(i,:) = b(i).XEndPoints;
+    else
+        % Older MATLAB versions compatibility
+        x(i,:) = b(i).XData + b(i).XOffset;
+    end
+end
+
+errorbar(x', means, stds, 'k', 'linestyle', 'none');
+
+set(gca, 'XTick', 1:ngroups, 'XTickLabel', categories);
+legend({'QCP', 'IAIF', 'TRLP'}, 'Location', 'best');
+ylabel('H1-H2 Error (dB) [Est - GT]');
+title('H1-H2 Estimation Error by Method, Vowel, and Gender');
+grid on;
+hold off;

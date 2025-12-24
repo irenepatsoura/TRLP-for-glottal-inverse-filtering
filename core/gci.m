@@ -17,11 +17,6 @@ end
 % Ensure x_data is a row vector for concatenation
 x_data = x_data(:)';
 
-disp(['meanf0: ', num2str(meanf0)]);
-disp(['fs: ', num2str(fs)]);
-disp(['1/meanf0: ', num2str(1/meanf0)]);
-disp(['Is 1/meanf0 < 0.008? ', num2str(1/meanf0 < 0.008)]);
-
 
 N = length(x_data);
 
@@ -58,10 +53,6 @@ for n = 1:N
     end
 end
 
-disp(['size of y: ', num2str(size(y))]);
-disp(['size of Nw: ', num2str(size(Nw))]);
-disp(['value of Nw: ', num2str(Nw)]);
-disp(['size of (2*Nw+1): ', num2str(size(2*Nw+1))]);
 % Normalize after the loops
 y = y/(2*Nw+1);
 
@@ -94,12 +85,6 @@ for i = 1:N-1
    end
 end
 
-disp(['Class of x_obj: ', class(x_obj)]);
-disp(['Has s property? ', num2str(isprop(x_obj, 's'))]);
-if isprop(x_obj, 's')
-    disp(['Length of x_obj.s: ', num2str(length(x_obj.s))]);
-end
-
 % Find maximum values of the LPC residual from the intervals
 
 x_res = filter(lpc_signal(x_obj,p),1,x_data);
@@ -117,20 +102,6 @@ for i=1:size(goi_int,2)
    [peak ind] = max(x_res(goi_int(1,i):goi_int(2,i)));
    goi_ins(i) = goi_int(1,i)+ind-1;
 end
-
-
-% Plot results (uncomment below to plot)
-
-% figure();
-% 
-% plot(x_res);
-% 
-% hold on;
-% plot(x,'g');
-% plot(100*y,'r');
-% plot(goi_ins,x_res(goi_ins),'ro');
-% plot(gci_ins,x_res(gci_ins),'rx');
-% hold off;
 
 end
 
