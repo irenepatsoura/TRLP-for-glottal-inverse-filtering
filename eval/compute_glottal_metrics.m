@@ -49,7 +49,19 @@ function metrics = compute_glottal_metrics(g, fs, f0)
     % E_e: Maximum excitation (negative peak of derivative)
     % We look for the minimum value of the derivative (most negative).
     % To be robust against noise, we can use findpeaks on -dg.
-    [pks, ~] = findpeaks(-dg, 'MinPeakHeight', max(abs(dg))*0.2, 'MinPeakDistance', round(T0_samples*0.8));
+    min_peak_height = max(abs(dg)) * 0.2;
+    
+    % Temporarily disable the warning
+    warning('off', 'signal:findpeaks:largeMinPeakHeight');
+    
+    if isempty(dg) || max(-dg) <= min_peak_height
+        pks = [];
+    else
+        [pks, ~] = findpeaks(-dg, 'MinPeakHeight', min_peak_height, 'MinPeakDistance', round(T0_samples*0.8));
+    end
+    
+    % Re-enable the warning
+    warning('on', 'signal:findpeaks:largeMinPeakHeight');
     
     if isempty(pks)
         E_e = max(abs(dg)); % Fallback to absolute max if no clear peaks
