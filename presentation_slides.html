@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Progress on Glottal Feature Analysis</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121a33;
+      --panel-2: #1a2548;
+      --text: #edf1ff;
+      --muted: #b8c2e6;
+      --accent: #7aa2ff;
+      --accent-2: #8de3c8;
+      --danger: #ff9ca3;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 20% 0%, #182447 0%, var(--bg) 40%);
+      color: var(--text);
+      font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      overflow: hidden;
+    }
+    #deck {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+    .slide {
+      position: absolute;
+      inset: 0;
+      padding: 56px 72px;
+      display: none;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .slide.active { display: flex; }
+    h1, h2, h3 { margin: 0 0 6px; line-height: 1.2; }
+    h1 { font-size: 2.4rem; }
+    h2 { font-size: 1.9rem; color: var(--accent); }
+    h3 { font-size: 1.2rem; color: var(--accent-2); }
+    p, li {
+      font-size: 1.1rem;
+      line-height: 1.45;
+      color: var(--text);
+    }
+    ul { margin: 0; padding-left: 1.2rem; }
+    .muted { color: var(--muted); }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .card {
+      background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .pill {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(122,162,255,0.2);
+      border: 1px solid rgba(122,162,255,0.6);
+      font-size: 0.8rem;
+      color: #dce6ff;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+    .kpi {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .kpi .card strong {
+      font-size: 1.4rem;
+      display: block;
+      margin-bottom: 4px;
+      color: var(--accent-2);
+    }
+    .flow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+    }
+    .node {
+      background: var(--panel-2);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 0.95rem;
+    }
+    .arrow { color: var(--accent); font-weight: 700; }
+    .small { font-size: 0.95rem; }
+    .warn { color: var(--danger); }
+    .footer {
+      position: absolute;
+      bottom: 14px;
+      left: 24px;
+      right: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    #progress {
+      height: 6px;
+      width: 280px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.15);
+      overflow: hidden;
+    }
+    #progress > div {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width 0.25s ease;
+    }
+    code {
+      background: rgba(255,255,255,0.1);
+      padding: 1px 5px;
+      border-radius: 6px;
+      font-family: Consolas, monospace;
+      font-size: 0.95em;
+    }
+    .tight li { margin-bottom: 4px; }
+    .plot-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .plot {
+      background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .plot h4 {
+      margin: 0 0 8px;
+      color: var(--accent-2);
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .bar-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 52px;
+      gap: 8px;
+      align-items: center;
+      margin: 6px 0;
+      font-size: 0.9rem;
+    }
+    .track {
+      background: rgba(255,255,255,0.12);
+      border-radius: 999px;
+      height: 12px;
+      overflow: hidden;
+    }
+    .fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    }
+    .legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .legend span::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      display: inline-block;
+      margin-right: 5px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      vertical-align: -1px;
+    }
+    .triple {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+  </style>
+</head>
+<body>
+  <main id="deck">
+    <section class="slide active">
+      <h1>Progress Update: Glottal Source Analysis for Pathological Speech</h1>
+      <h3>Technical advances completed so far</h3>
+      <div class="card">
+        <p><strong>Author:</strong> Irene</p>
+        <p><strong>Date:</strong> February 2026</p>
+        <p class="muted">Focus of this talk: data conditioning, source-filter estimation, engineered descriptors, and classification evidence across IAIF, QCP, and TRLP.</p>
+      </div>
+      <div class="flow">
+        <span class="node">Signal conditioning</span>
+        <span class="arrow">→</span>
+        <span class="node">Glottal/VT decomposition</span>
+        <span class="arrow">→</span>
+        <span class="node">Feature engineering</span>
+        <span class="arrow">→</span>
+        <span class="node">HC vs PD classification</span>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2>Clinical Speech Challenge and Objective</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Challenge</h3>
+          <ul class="tight">
+            <li>Pathological voices show altered phonation, breathiness, and unstable periodicity.</li>
+            <li>Conventional spectral summaries can miss physiological source dynamics.</li>
+            <li>Speaker variability can confound pathology-related signatures.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Objective</h3>
+          <ul class="tight">
+            <li>Recover robust glottal flow-related descriptors from speech.</li>
+            <li>Compare multiple inverse-filtering paradigms under one protocol.</li>
+            <li>Quantify discriminative value for healthy control vs Parkinsonian speech.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card small">
+        Technical emphasis: stable front-end estimation before model complexity.
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2>Signal Conditioning and Framing Strategy</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Pre-analysis conditioning</h3>
+          <ul class="tight">
+            <li>Channel consolidation to monophonic waveform.</li>
+            <li>Automatic polarity correction using skewness criterion.</li>
+            <li>Low-frequency drift suppression through high-pass filtering at 50 Hz.</li>
+            <li>Amplitude and temporal consistency checks before decomposition.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Frame design</h3>
+          <ul class="tight">
+            <li>Short-time analysis with 50 ms windows and 10 ms shift.</li>
+            <li>Overlap supports smooth temporal trajectories of glottal estimates.</li>
+            <li>Option to switch toward pitch-adaptive segmentation when needed.</li>
+            <li>Global F0 priors used to stabilize inversion on short frames.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="flow">
+        <span class="node">Conditioned waveform</span><span class="arrow">→</span>
+        <span class="node">Framewise inversion</span><span class="arrow">→</span>
+        <span class="node">Glottal-flow proxies</span><span class="arrow">→</span>
+        <span class="node">Statistics per recording</span>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2>Inverse-Filtering Methods: Technical Summary</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>IAIF</h3>
+          <ul class="tight">
+            <li>Iterative decomposition alternating source and tract estimates.</li>
+            <li>Low-order glottal modeling + higher-order tract compensation.</li>
+            <li>Works well as a balanced baseline for physiological interpretability.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>QCP</h3>
+          <ul class="tight">
+            <li>Closed-phase focused tract estimation to reduce source leakage.</li>
+            <li>More selective use of glottal cycle regions.</li>
+            <li>Produces stable tract/source separation in strongly voiced segments.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card">
+        <h3>TRLP</h3>
+        <ul class="tight">
+          <li>Recursive linear prediction with temporal coefficient continuity.</li>
+          <li>Residual-driven glottal flow trend reconstruction via leaky integration.</li>
+          <li>Useful for continuity constraints, but sensitive to noise/model mismatch.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2>Engineered Feature Space</h2>
+      <div class="triple">
+        <div class="card">
+          <h3>Glottal quotients</h3>
+          <span class="pill">NAQ</span>
+          <span class="pill">QOQ</span>
+          <p class="small muted">Capture opening/closing behavior and pulse-shape asymmetry.</p>
+        </div>
+        <div class="card">
+          <h3>Spectral balance</h3>
+          <span class="pill">HRF</span>
+          <span class="pill">H1H2</span>
+          <p class="small muted">Reflect breathiness, tension, and glottal spectral tilt patterns.</p>
+        </div>
+        <div class="card">
+          <h3>Energy + dynamics</h3>
+          <span class="pill">G_RMS</span>
+          <span class="pill">G_ZCR</span>
+          <span class="pill">G_CREST</span>
+          <span class="pill">DG_PEAK</span>
+          <span class="pill">RES_RMS</span>
+          <p class="small muted">Quantify excitation intensity, irregularity, and residual structure.</p>
+        </div>
+      </div>
+      <div class="card small">
+        Complementary acoustic baseline: MFCC-derived descriptors for broader spectral envelope information.
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2>Evaluation Design for Reliable Clinical Signal</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Validation protocol</h3>
+          <ul class="tight">
+            <li>Nested cross-validation with speaker-group separation.</li>
+            <li>Outer folds estimate generalization; inner folds tune hyperparameters.</li>
+            <li>Prevents speaker leakage between train and test partitions.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Reported views</h3>
+          <ul class="tight">
+            <li>Sample-level performance (frame/segment perspective).</li>
+            <li>Speaker-level performance (clinical decision perspective).</li>
+            <li>Probability aggregation by speaker for stable subject estimates.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="kpi">
+        <div class="card"><strong>Accuracy</strong><span class="small">Sample and speaker levels</span></div>
+        <div class="card"><strong>Balanced Acc</strong><span class="small">Class-imbalance aware</span></div>
+        <div class="card"><strong>F1 / AUC</strong><span class="small">Discrimination quality</span></div>
+        <div class="card"><strong>PR-AUC</strong><span class="small">Positive class sensitivity</span></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2>Results Plot 1: Speaker AUC by Method and Feature Set</h2>
+      <div class="plot-grid">
+        <div class="plot">
+          <h4>SVM — Glottal only</h4>
+          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:67.2%"></div></div><span>0.672</span></div>
+          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:70.4%"></div></div><span>0.704</span></div>
+          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:63.6%"></div></div><span>0.636</span></div>
+          <h4 style="margin-top:12px;">SVM — Glottal + MFCC</h4>
+          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:85.6%"></div></div><span>0.856</span></div>
+          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:91.2%"></div></div><span>0.912</span></div>
+          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:87.6%"></div></div><span>0.876</span></div>
+        </div>
+        <div class="plot">
+          <h4>Random Forest — Glottal only</h4>
+          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:68.8%"></div></div><span>0.688</span></div>
+          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:71.2%"></div></div><span>0.712</span></div>
+          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:68.8%"></div></div><span>0.688</span></div>
+          <h4 style="margin-top:12px;">Random Forest — Glottal + MFCC</h4>
+          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:88.4%"></div></div><span>0.884</span></div>
+          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:87.2%"></div></div><span>0.872</span></div>
+          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:86.8%"></div></div><span>0.868</span></div>
+        </div>
+      </div>
+      <div class="legend"><span>Higher is better (speaker-level discrimination)</span></div>
+    </section>
+
+    <section class="slide">
+      <h2>Results Plot 2: Speaker Accuracy and Main Trends</h2>
+      <div class="plot-grid">
+        <div class="plot">
+          <h4>SVM speaker accuracy (Glottal + MFCC)</h4>
+          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:76%"></div></div><span>0.760</span></div>
+          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:80%"></div></div><span>0.800</span></div>
+          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:78%"></div></div><span>0.780</span></div>
+          <h4 style="margin-top:12px;">Random Forest speaker accuracy</h4>
+          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:78%"></div></div><span>0.780</span></div>
+          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:78%"></div></div><span>0.780</span></div>
+          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:78%"></div></div><span>0.780</span></div>
+        </div>
+        <div class="card">
+          <h3>Interpretation</h3>
+          <ul class="tight">
+            <li>Strong jump from glottal-only to glottal+MFCC in all three methods.</li>
+            <li>QCP+SVM reaches the highest speaker AUC (0.912) among completed runs.</li>
+            <li>RF provides stable high speaker metrics across methods once MFCC is added.</li>
+            <li>Direct-only additions did not change performance relative to glottal-only in these runs.</li>
+            <li>Conclusion: complementary acoustic context remains essential for strongest discrimination.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2>Comparative Findings Across IAIF, QCP, TRLP</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Glottal-only regime</h3>
+          <ul class="tight">
+            <li>Moderate discrimination (speaker AUC roughly 0.64 to 0.71).</li>
+            <li>QCP generally strongest in this constrained setting.</li>
+            <li>TRLP shows weaker sample-level behavior without acoustic complement.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Glottal + acoustic regime</h3>
+          <ul class="tight">
+            <li>Speaker AUC rises to approximately 0.87 to 0.91.</li>
+            <li>Speaker accuracy consolidates around 0.78 to 0.80.</li>
+            <li>Variance across folds decreases relative to glottal-only setup.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Technical implication</h3>
+        <p class="small">Glottal descriptors carry clinically relevant signal, but their strongest impact appears when fused with broad acoustic descriptors that preserve contextual phonetic structure.</p>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2>Methodological Notes and Ongoing Work</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Current confidence in results</h3>
+          <ul class="tight">
+            <li>Speaker-grouped validation supports realistic subject-level generalization.</li>
+            <li>Consistent ranking patterns across IAIF/QCP/TRLP increase robustness of conclusions.</li>
+            <li>Both sample-level and speaker-level views tell a coherent story.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Open analysis lines</h3>
+          <ul class="tight">
+            <li>Error profiling by vowel type and phonatory difficulty.</li>
+            <li>Sensitivity to frame size and F0 prior stability.</li>
+            <li>Calibration analysis on predicted probabilities for clinical thresholds.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card small">
+        <strong>Status note:</strong> XGBoost experiments are currently running and will be incorporated in the next update as an additional benchmark line.
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2>Potential Integration (One Slide): Early-Exit ASR</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Why this could help</h3>
+          <ul class="tight">
+            <li>Better front-end representations can reduce uncertainty at shallow encoder depths.</li>
+            <li>Difficult pathological segments can still be routed to deeper layers.</li>
+            <li>Expected effect: improved efficiency-robustness tradeoff on edge hardware.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Minimal integration concept</h3>
+          <ul class="tight">
+            <li>Front-end fusion of acoustic and glottal descriptors.</li>
+            <li>Confidence head observes both linguistic posterior and signal-quality cues.</li>
+            <li>Analyze exit-depth distribution across healthy vs pathological speech.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Planned validation target</h3>
+        <ul>
+          <li>Keep current clinical classification findings as the evidence base.</li>
+          <li>Use them to motivate a later ASR transfer study, not to replace the current work focus.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2>Conclusions</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>What is established</h3>
+          <ul class="tight">
+            <li>A complete and technically grounded glottal analysis workflow is in place.</li>
+            <li>QCP and IAIF show strong discriminative behavior when combined with acoustic descriptors.</li>
+            <li>Speaker-level metrics reach high values for vowel-task pathology discrimination.</li>
+            <li>Results are consistent across two strong baseline classifiers.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Immediate next update</h3>
+          <ul class="tight">
+            <li>Add ongoing XGBoost outcomes for direct comparison with SVM and RF.</li>
+            <li>Expand error analysis by subgroup and phonation characteristics.</li>
+            <li>Refine feature-importance interpretation at speaker level.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card small">Thank you — feedback on methodology and interpretation is welcome.</div>
+    </section>
+
+    <div class="footer">
+      <span id="slideLabel">Slide 1</span>
+      <div id="progress"><div></div></div>
+      <span>Use ← / → or Space</span>
+    </div>
+  </main>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const label = document.getElementById('slideLabel');
+    const bar = document.querySelector('#progress > div');
+    let index = 0;
+
+    function render() {
+      slides.forEach((s, i) => s.classList.toggle('active', i === index));
+      label.textContent = `Slide ${index + 1} / ${slides.length}`;
+      bar.style.width = `${((index + 1) / slides.length) * 100}%`;
+    }
+
+    function next() { if (index < slides.length - 1) { index += 1; render(); } }
+    function prev() { if (index > 0) { index -= 1; render(); } }
+
+    window.addEventListener('keydown', (e) => {
+      if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) {
+        e.preventDefault();
+        next();
+      }
+      if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) {
+        e.preventDefault();
+        prev();
+      }
+      if (e.key.toLowerCase() === 'home') { index = 0; render(); }
+      if (e.key.toLowerCase() === 'end') { index = slides.length - 1; render(); }
+    });
+
+    window.addEventListener('click', (e) => {
+      const width = window.innerWidth;
+      if (e.clientX > width * 0.33) next();
+      else prev();
+    });
+
+    render();
+  </script>
+</body>
+</html>

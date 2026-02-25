@@ -2,6 +2,9 @@ import os
 import glob
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+from datetime import datetime
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
@@ -59,6 +62,62 @@ def summarize_metrics(title: str, results_sample: dict, results_speaker: dict):
         print(f"{metric:<14} | {mean_samp:.4f} ± {std_samp:.4f}      | {mean_spk:.4f} ± {std_spk:.4f}")
 
 
+def compute_metrics_summary_row(results_sample: dict, results_speaker: dict):
+    row = {}
+    for metric in results_sample.keys():
+        row[f"sample_{metric}_mean"] = float(np.nanmean(results_sample[metric]))
+        row[f"sample_{metric}_std"] = float(np.nanstd(results_sample[metric]))
+        row[f"speaker_{metric}_mean"] = float(np.nanmean(results_speaker[metric]))
+        row[f"speaker_{metric}_std"] = float(np.nanstd(results_speaker[metric]))
+    return row
+
+
+def save_explanatory_plots(summary_df: pd.DataFrame, out_dir: Path, task_name: str):
+    if summary_df.empty:
+        return
+
+    metrics_to_plot = ["speaker_auc_mean", "speaker_pr_auc_mean", "speaker_f1_mean", "speaker_balanced_acc_mean"]
+    available_metrics = [m for m in metrics_to_plot if m in summary_df.columns]
+    if not available_metrics:
+        return
+
+    labels = (summary_df["model"] + " | " + summary_df["feature_subset"]).tolist()
+    x = np.arange(len(labels))
+
+    fig, axes = plt.subplots(len(available_metrics), 1, figsize=(max(10, len(labels) * 0.7), 3.6 * len(available_metrics)))
+    if len(available_metrics) == 1:
+        axes = [axes]
+
+    for ax, metric in zip(axes, available_metrics):
+        ax.bar(x, summary_df[metric].values)
+        ax.set_title(f"{task_name}: {metric}")
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=45, ha='right')
+        ax.set_ylim(0, 1)
+        ax.grid(axis='y', linestyle='--', alpha=0.35)
+
+    fig.tight_layout()
+    fig.savefig(out_dir / "summary_barplots.png", dpi=180, bbox_inches='tight')
+    plt.close(fig)
+
+    # Heatmap-style overview (matshow) for speaker metrics
+    heat_cols = [c for c in ["speaker_accuracy_mean", "speaker_balanced_acc_mean", "speaker_f1_mean", "speaker_auc_mean", "speaker_pr_auc_mean"] if c in summary_df.columns]
+    if heat_cols:
+        mat = summary_df[heat_cols].to_numpy(dtype=float)
+        fig, ax = plt.subplots(figsize=(1.8 * len(heat_cols) + 4, 0.5 * len(summary_df) + 3))
+        im = ax.imshow(mat, aspect='auto', cmap='viridis', vmin=0.0, vmax=1.0)
+        ax.set_title(f"{task_name}: Speaker-level metric overview")
+        ax.set_xticks(np.arange(len(heat_cols)))
+        ax.set_xticklabels(heat_cols, rotation=30, ha='right')
+        ax.set_yticks(np.arange(len(labels)))
+        ax.set_yticklabels(labels)
+        cbar = fig.colorbar(im, ax=ax)
+        cbar.set_label('score')
+        fig.tight_layout()
+        fig.savefig(out_dir / "summary_heatmap.png", dpi=180, bbox_inches='tight')
+        plt.close(fig)
+
+
 def evaluate_model_with_nested_cv(model_name, estimator, param_grid, X, y, groups, n_repeats=1, n_outer_splits=10, n_inner_splits=5, base_random_state=42):
     metrics_template = {
         "accuracy": [],
@@ -72,6 +131,7 @@ def evaluate_model_with_nested_cv(model_name, estimator, param_grid, X, y, group
 
     results_sample = {k: [] for k in metrics_template}
     results_speaker = {k: [] for k in metrics_template}
+    fold_records = []
 
     for repeat in range(n_repeats):
         current_seed = base_random_state + repeat
@@ -127,9 +187,29 @@ def evaluate_model_with_nested_cv(model_name, estimator, param_grid, X, y, group
                 results_speaker["auc"].append(np.nan)
                 results_speaker["pr_auc"].append(np.nan)
 
+            fold_records.append({
+                "model_name": model_name,
+                "repeat": repeat + 1,
+                "fold": fold,
+                "sample_accuracy": results_sample["accuracy"][-1],
+                "sample_balanced_acc": results_sample["balanced_acc"][-1],
+                "sample_f1": results_sample["f1"][-1],
+                "sample_auc": results_sample["auc"][-1],
+                "sample_pr_auc": results_sample["pr_auc"][-1],
+                "sample_precision": results_sample["precision"][-1],
+                "sample_recall": results_sample["recall"][-1],
+                "speaker_accuracy": results_speaker["accuracy"][-1],
+                "speaker_balanced_acc": results_speaker["balanced_acc"][-1],
+                "speaker_f1": results_speaker["f1"][-1],
+                "speaker_auc": results_speaker["auc"][-1],
+                "speaker_pr_auc": results_speaker["pr_auc"][-1],
+                "speaker_precision": results_speaker["precision"][-1],
+                "speaker_recall": results_speaker["recall"][-1],
+            })
+
             print(f"{model_name} | Fold {fold}/{n_outer_splits} complete")
 
-    return results_sample, results_speaker
+    return results_sample, results_speaker, pd.DataFrame(fold_records)
 
 
 def build_feature_subsets(X: pd.DataFrame):
@@ -166,7 +246,7 @@ def build_feature_subsets(X: pd.DataFrame):
 
     return ordered_subsets
 
-def run_classification_for_task(csv_file):
+def run_classification_for_task(csv_file, run_output_dir: Path):
     print(f"\n{'='*80}")
     print(f"Processing task from file: {csv_file}")
     print(f"{'='*80}")
@@ -290,6 +370,13 @@ def run_classification_for_task(csv_file):
 
     print(f"\nFINAL RESULTS FOR {csv_file}")
 
+    task_stem = Path(csv_file).stem
+    task_out_dir = run_output_dir / task_stem
+    task_out_dir.mkdir(parents=True, exist_ok=True)
+
+    summary_rows = []
+    all_fold_dfs = []
+
     for subset_name, subset_cols in feature_subsets.items():
         if len(subset_cols) == 0:
             print(f"\nSubset {subset_name}: no columns found, skipping")
@@ -303,7 +390,7 @@ def run_classification_for_task(csv_file):
                 continue
 
             model_cfg = models_config[model_key]
-            model_sample, model_speaker = evaluate_model_with_nested_cv(
+            model_sample, model_speaker, fold_df = evaluate_model_with_nested_cv(
                 model_name=f"{model_cfg['model_name']}-{subset_name}",
                 estimator=model_cfg['estimator'],
                 param_grid=model_cfg['param_grid'],
@@ -318,10 +405,66 @@ def run_classification_for_task(csv_file):
 
             summarize_metrics(f"{model_cfg['title']} [{subset_name}]", model_sample, model_speaker)
 
+            row = {
+                "csv_file": csv_file,
+                "task_stem": task_stem,
+                "model": model_key,
+                "model_title": model_cfg['title'],
+                "feature_subset": subset_name,
+                "n_features": len(subset_cols),
+                "n_rows": len(data),
+            }
+            row.update(compute_metrics_summary_row(model_sample, model_speaker))
+            summary_rows.append(row)
+
+            if not fold_df.empty:
+                fold_df["csv_file"] = csv_file
+                fold_df["task_stem"] = task_stem
+                fold_df["model"] = model_key
+                fold_df["feature_subset"] = subset_name
+                all_fold_dfs.append(fold_df)
+
+    summary_df = pd.DataFrame(summary_rows)
+    summary_csv = task_out_dir / "summary_metrics.csv"
+    summary_df.to_csv(summary_csv, index=False)
+
+    if all_fold_dfs:
+        folds_df = pd.concat(all_fold_dfs, ignore_index=True)
+        folds_df.to_csv(task_out_dir / "fold_metrics.csv", index=False)
+
+    save_explanatory_plots(summary_df, task_out_dir, task_stem)
+    print(f"Saved task outputs to: {task_out_dir}")
+
 if __name__ == "__main__":
+    base_results_dir = Path("classification_results")
+    base_results_dir.mkdir(parents=True, exist_ok=True)
+    run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_output_dir = base_results_dir / f"run_{run_timestamp}"
+    run_output_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"Writing results under: {run_output_dir}")
+
     csv_files = glob.glob("features_*.csv")
     if not csv_files:
         print("No feature CSV files found. Please run the MATLAB extraction script first.")
     else:
         for csv_file in csv_files:
-            run_classification_for_task(csv_file)
+            run_classification_for_task(csv_file, run_output_dir)
+
+        # Run-level global exports for easy cross-task comparison
+        summary_files = sorted(run_output_dir.glob("*/summary_metrics.csv"))
+        if summary_files:
+            all_summary = pd.concat([pd.read_csv(f) for f in summary_files], ignore_index=True)
+            all_summary.to_csv(run_output_dir / "global_summary_metrics.csv", index=False)
+
+            # Convenience ranking by speaker AUC (descending)
+            if "speaker_auc_mean" in all_summary.columns:
+                ranked = all_summary.sort_values(by="speaker_auc_mean", ascending=False)
+                ranked.to_csv(run_output_dir / "global_summary_ranked_by_speaker_auc.csv", index=False)
+
+        fold_files = sorted(run_output_dir.glob("*/fold_metrics.csv"))
+        if fold_files:
+            all_folds = pd.concat([pd.read_csv(f) for f in fold_files], ignore_index=True)
+            all_folds.to_csv(run_output_dir / "global_fold_metrics.csv", index=False)
+
+        print(f"Global summary files saved in: {run_output_dir}")
