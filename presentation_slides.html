@@ -6,6 +6,7 @@
   <title>Progress on Glottal Feature Analysis</title>
   <style>
     :root {
+      --footer-space: 72px;
       --bg: #0b1020;
       --panel: #121a33;
       --panel-2: #1a2548;
@@ -33,12 +34,18 @@
     .slide {
       position: absolute;
       inset: 0;
-      padding: 56px 72px;
+      padding: clamp(40px, 5.5vh, 64px) clamp(40px, 5.5vw, 80px);
+      padding-bottom: calc(var(--footer-space) + 28px);
       display: none;
       flex-direction: column;
-      gap: 18px;
+      gap: clamp(14px, 2.2vh, 24px);
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
     }
     .slide.active { display: flex; }
+    .slide > * { width: min(1200px, 100%); }
+    .grid, .kpi, .flow, .plot-grid, .triple, .quad { width: 100%; }
     h1, h2, h3 { margin: 0 0 6px; line-height: 1.2; }
     h1 { font-size: 2.4rem; }
     h2 { font-size: 1.9rem; color: var(--accent); }
@@ -54,12 +61,14 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
+      width: 100%;
     }
     .card {
       background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
       border: 1px solid rgba(255,255,255,0.12);
       border-radius: 12px;
       padding: 14px 16px;
+      width: 100%;
     }
     .pill {
       display: inline-block;
@@ -71,11 +80,13 @@
       color: #dce6ff;
       margin-right: 6px;
       margin-bottom: 6px;
+      width: fit-content;
     }
     .kpi {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
+      width: 100%;
     }
     .kpi .card strong {
       font-size: 1.4rem;
@@ -89,6 +100,7 @@
       gap: 8px;
       align-items: center;
       margin-top: 8px;
+      width: 100%;
     }
     .node {
       background: var(--panel-2);
@@ -151,11 +163,11 @@
     }
     .bar-row {
       display: grid;
-      grid-template-columns: 140px 1fr 52px;
+      grid-template-columns: 130px 1fr 150px;
       gap: 8px;
       align-items: center;
       margin: 6px 0;
-      font-size: 0.9rem;
+      font-size: 0.84rem;
     }
     .track {
       background: rgba(255,255,255,0.12);
@@ -189,6 +201,17 @@
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap: 12px;
+    }
+    .quad {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .value {
+      color: var(--muted);
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
     }
   </style>
 </head>
@@ -358,50 +381,79 @@
 
     <section class="slide">
       <h2>Results Plot 1: Speaker AUC by Method and Feature Set</h2>
-      <div class="plot-grid">
+      <div class="quad">
         <div class="plot">
           <h4>SVM — Glottal only</h4>
-          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:67.2%"></div></div><span>0.672</span></div>
-          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:70.4%"></div></div><span>0.704</span></div>
-          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:63.6%"></div></div><span>0.636</span></div>
+          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:67.2%"></div></div><span class="value">0.672 ± 0.192</span></div>
+          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:70.4%"></div></div><span class="value">0.704 ± 0.198</span></div>
+          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:63.6%"></div></div><span class="value">0.636 ± 0.217</span></div>
           <h4 style="margin-top:12px;">SVM — Glottal + MFCC</h4>
-          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:85.6%"></div></div><span>0.856</span></div>
-          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:91.2%"></div></div><span>0.912</span></div>
-          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:87.6%"></div></div><span>0.876</span></div>
+          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:85.6%"></div></div><span class="value">0.856 ± 0.129</span></div>
+          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:91.2%"></div></div><span class="value">0.912 ± 0.107</span></div>
+          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:87.6%"></div></div><span class="value">0.876 ± 0.111</span></div>
         </div>
         <div class="plot">
           <h4>Random Forest — Glottal only</h4>
-          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:68.8%"></div></div><span>0.688</span></div>
-          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:71.2%"></div></div><span>0.712</span></div>
-          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:68.8%"></div></div><span>0.688</span></div>
+          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:68.8%"></div></div><span class="value">0.688 ± 0.189</span></div>
+          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:71.2%"></div></div><span class="value">0.712 ± 0.181</span></div>
+          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:68.8%"></div></div><span class="value">0.688 ± 0.169</span></div>
           <h4 style="margin-top:12px;">Random Forest — Glottal + MFCC</h4>
-          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:88.4%"></div></div><span>0.884</span></div>
-          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:87.2%"></div></div><span>0.872</span></div>
-          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:86.8%"></div></div><span>0.868</span></div>
+          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:88.4%"></div></div><span class="value">0.884 ± 0.118</span></div>
+          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:87.2%"></div></div><span class="value">0.872 ± 0.111</span></div>
+          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:86.8%"></div></div><span class="value">0.868 ± 0.101</span></div>
+        </div>
+        <div class="plot">
+          <h4>XGBoost — Glottal only</h4>
+          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:68%"></div></div><span class="value">0.680 ± 0.176</span></div>
+          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:71.6%"></div></div><span class="value">0.716 ± 0.181</span></div>
+          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:64.4%"></div></div><span class="value">0.644 ± 0.154</span></div>
+          <h4 style="margin-top:12px;">XGBoost — Glottal + MFCC</h4>
+          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:88%"></div></div><span class="value">0.880 ± 0.091</span></div>
+          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:90.4%"></div></div><span class="value">0.904 ± 0.074</span></div>
+          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:89.2%"></div></div><span class="value">0.892 ± 0.065</span></div>
+        </div>
+        <div class="card">
+          <h3>Cross-model readout</h3>
+          <ul class="tight">
+            <li>All models improve substantially when MFCC is fused with glottal descriptors.</li>
+            <li>Best speaker AUC overall remains QCP + SVM (0.912), closely followed by QCP + XGBoost (0.904).</li>
+            <li>XGBoost is highly competitive and consistently strong across all three decomposition methods.</li>
+          </ul>
         </div>
       </div>
-      <div class="legend"><span>Higher is better (speaker-level discrimination)</span></div>
+      <div class="legend"><span>Higher is better (speaker-level discrimination), values shown as mean ± std across folds</span></div>
     </section>
 
     <section class="slide">
       <h2>Results Plot 2: Speaker Accuracy and Main Trends</h2>
-      <div class="plot-grid">
+      <div class="quad">
         <div class="plot">
           <h4>SVM speaker accuracy (Glottal + MFCC)</h4>
-          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:76%"></div></div><span>0.760</span></div>
-          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:80%"></div></div><span>0.800</span></div>
-          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:78%"></div></div><span>0.780</span></div>
+          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:76%"></div></div><span class="value">0.760 ± 0.136</span></div>
+          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:80%"></div></div><span class="value">0.800 ± 0.089</span></div>
+          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:78%"></div></div><span class="value">0.780 ± 0.108</span></div>
           <h4 style="margin-top:12px;">Random Forest speaker accuracy</h4>
-          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:78%"></div></div><span>0.780</span></div>
-          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:78%"></div></div><span>0.780</span></div>
-          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:78%"></div></div><span>0.780</span></div>
+          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:78%"></div></div><span class="value">0.780 ± 0.133</span></div>
+          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:78%"></div></div><span class="value">0.780 ± 0.140</span></div>
+          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:78%"></div></div><span class="value">0.780 ± 0.133</span></div>
+        </div>
+        <div class="plot">
+          <h4>XGBoost speaker accuracy (Glottal + MFCC)</h4>
+          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:77%"></div></div><span class="value">0.770 ± 0.135</span></div>
+          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:79%"></div></div><span class="value">0.790 ± 0.094</span></div>
+          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:80%"></div></div><span class="value">0.800 ± 0.110</span></div>
+          <h4 style="margin-top:12px;">XGBoost speaker PR-AUC</h4>
+          <div class="bar-row"><span>IAIF</span><div class="track"><div class="fill" style="width:89.95%"></div></div><span class="value">0.900 ± 0.066</span></div>
+          <div class="bar-row"><span>QCP</span><div class="track"><div class="fill" style="width:92.18%"></div></div><span class="value">0.922 ± 0.056</span></div>
+          <div class="bar-row"><span>TRLP</span><div class="track"><div class="fill" style="width:91.28%"></div></div><span class="value">0.913 ± 0.054</span></div>
         </div>
         <div class="card">
           <h3>Interpretation</h3>
           <ul class="tight">
             <li>Strong jump from glottal-only to glottal+MFCC in all three methods.</li>
-            <li>QCP+SVM reaches the highest speaker AUC (0.912) among completed runs.</li>
+            <li>QCP+SVM reaches the highest speaker AUC (0.912), with QCP+XGBoost very close (0.904).</li>
             <li>RF provides stable high speaker metrics across methods once MFCC is added.</li>
+            <li>XGBoost adds high precision-recall behavior (speaker PR-AUC up to 0.922 with QCP).</li>
             <li>Direct-only additions did not change performance relative to glottal-only in these runs.</li>
             <li>Conclusion: complementary acoustic context remains essential for strongest discrimination.</li>
           </ul>
@@ -416,15 +468,15 @@
           <h3>Glottal-only regime</h3>
           <ul class="tight">
             <li>Moderate discrimination (speaker AUC roughly 0.64 to 0.71).</li>
-            <li>QCP generally strongest in this constrained setting.</li>
+            <li>QCP generally strongest in this constrained setting across SVM, RF, and XGBoost.</li>
             <li>TRLP shows weaker sample-level behavior without acoustic complement.</li>
           </ul>
         </div>
         <div class="card">
           <h3>Glottal + acoustic regime</h3>
           <ul class="tight">
-            <li>Speaker AUC rises to approximately 0.87 to 0.91.</li>
-            <li>Speaker accuracy consolidates around 0.78 to 0.80.</li>
+            <li>Speaker AUC rises to approximately 0.87 to 0.91 (up to 0.912).</li>
+            <li>Speaker accuracy consolidates around 0.77 to 0.80 across all three classifiers.</li>
             <li>Variance across folds decreases relative to glottal-only setup.</li>
           </ul>
         </div>
@@ -456,12 +508,12 @@
         </div>
       </div>
       <div class="card small">
-        <strong>Status note:</strong> XGBoost experiments are currently running and will be incorporated in the next update as an additional benchmark line.
+        <strong>Status note:</strong> XGBoost benchmark is now incorporated and confirms the same central pattern observed with SVM/RF: strong gains from glottal + MFCC fusion, especially for QCP and TRLP.
       </div>
     </section>
 
     <section class="slide">
-      <h2>Potential Integration (One Slide): Early-Exit ASR</h2>
+      <h2>Potential Integration: Early-Exit ASR</h2>
       <div class="grid">
         <div class="card">
           <h3>Why this could help</h3>
@@ -496,15 +548,15 @@
           <h3>What is established</h3>
           <ul class="tight">
             <li>A complete and technically grounded glottal analysis workflow is in place.</li>
-            <li>QCP and IAIF show strong discriminative behavior when combined with acoustic descriptors.</li>
-            <li>Speaker-level metrics reach high values for vowel-task pathology discrimination.</li>
-            <li>Results are consistent across two strong baseline classifiers.</li>
+            <li>QCP and IAIF show strong discriminative behavior when combined with acoustic descriptors, with TRLP improving strongly under fusion.</li>
+            <li>Speaker-level metrics reach high values for vowel-task pathology discrimination (AUC up to 0.912).</li>
+            <li>Results are consistent across SVM, Random Forest, and XGBoost.</li>
           </ul>
         </div>
         <div class="card">
           <h3>Immediate next update</h3>
           <ul class="tight">
-            <li>Add ongoing XGBoost outcomes for direct comparison with SVM and RF.</li>
+            <li>Add confidence intervals and statistical significance comparisons between classifiers.</li>
             <li>Expand error analysis by subgroup and phonation characteristics.</li>
             <li>Refine feature-importance interpretation at speaker level.</li>
           </ul>
