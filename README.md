@@ -179,12 +179,6 @@ TRLP-for-glottal-inverse-filtering/
 └── HOWTO_IF/
 ```
 
-## Notes for Sharing the Repository
-
-- The classification code can be shared without MATLAB or PC-GITA as long as the `features_*.csv` files are included separately.
-- If you want a cleaner shared package, the local PDF folders can be removed after preserving the references below.
-- Before external sharing, review whether result figures or dataset-derived outputs should remain in the repository.
-
 ## Reading List
 
 This section is intended to replace local storage of publisher PDFs in `HOWTO_ENVELOPE/` and `HOWTO_IF/`. Prefer DOI landing pages, official conference pages, or other legal public links over redistributing PDFs.
