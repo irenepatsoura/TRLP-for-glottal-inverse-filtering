@@ -181,8 +181,6 @@ TRLP-for-glottal-inverse-filtering/
 
 ## Reading List
 
-This section is intended to replace local storage of publisher PDFs in `HOWTO_ENVELOPE/` and `HOWTO_IF/`. Prefer DOI landing pages, official conference pages, or other legal public links over redistributing PDFs.
-
 1. Glottal wave analysis with pitch synchronous iterative adaptive inverse filtering
    - Authors: Paavo Alku
    - Year: 1991
